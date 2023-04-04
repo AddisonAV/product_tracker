@@ -63,7 +63,7 @@ def run():
             if lowest_price is not None:
                 if lowest_price < price_threshold:
                     # Send the results to Telegram
-                        telegram.send(f"Lowest price found: R${results[0]['price']} ({results[0]['name']})\n{results[0]['url']}")
+                        telegram.send(f"Lowest price found: R${results[0]['price']}\n({results[0]['name']})\n{results[0]['url']}")
                         print(f"Lowest price of the week: {bcolors.OKGREEN}R$ {lowest_price:.2f}{bcolors.ENDC}")
             else:
                 print("No product found.")
@@ -71,7 +71,7 @@ def run():
         
         print(f"Last checked: {datetime.datetime.now()}")
         logging.info(f"Last checked: {datetime.datetime.now()}")
-        time.sleep(3600 * 6) # check once a day
+        time.sleep(3600 * 1) # check once a hour
         run()
     except KeyboardInterrupt:
         # User pressed Ctrl+C, silently exit

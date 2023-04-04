@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup as soup
-import time, requests, logging
+import requests
+import logging
 import re
 
 class bcolors:
@@ -15,57 +16,46 @@ class bcolors:
 
 
 class pichau:
-
     def __init__(self):
-        self.source_url = "https://www.pichau.com.br/search?q="
+        self.search_url = "https://www.pichau.com.br/search?q="
 
     def search_product(self, search_query):
         try:
-            url = search_query.replace(" ", "%20")
-            url = f"{self.source_url}{url}"
-            logging.info(f"Searching for '{search_query}' in '{url}'")
-            page = requests.get(url)
-            page_content = soup(page.content, "html.parser")
+            search_url = f"{self.search_url}{search_query.replace(' ', '%20')}"
+            logging.info(f"Searching for '{search_query}' in '{search_url}'")
+            page = requests.get(search_url)
+            page_soup = soup(page.content, "html.parser")
         except requests.exceptions.RequestException as e:
             logging.error(f"Error occurred while making HTTP request: {e}")
             return []
 
         products = []
-        for product in page_content.find_all('a', attrs={'data-cy':"list-product"}):
+        for product in page_soup.find_all('a', attrs={'data-cy': 'list-product'}):
             product_name = product.find('h2')
             if not product_name:
                 continue
             product_name = product_name.text.strip()
 
-            #checking if product is the same as the search query
-            valid_product = True
-            search_keys = search_query.lower().split()
-            for word in search_keys:
-                if not re.search(str(word), product_name.lower()): 
-                    valid_product = False
-            if not valid_product: 
+            # Check if product name matches search query
+            matches_query = all(word in product_name.lower() for word in search_query.lower().split())
+            if not matches_query:
                 continue
 
-            #getting product price        
+            # Get product price
             product_price = product.find('div', class_="")
             if not product_price:
                 continue
-
-            prices = re.findall(r'R?\$\s*[\d,]+(?:\.\d{2})?', 
-                                product_price.text.strip())            
-            
-            if len(prices) == 0:
+            price_matches = re.findall(r'R?\$\s*[\d,]+(?:\.\d{2})?', product_price.text.strip())
+            if not price_matches:
                 continue
-
-            # Getting right price
-            price = prices[1] if len(prices) > 2 else prices[0]
+            price = price_matches[1] if len(price_matches) > 1 else price_matches[0]
             price = price.replace("R$", "").replace(" ", "").replace(",", "")
 
-            #adding product to products
+            # Add product to list
             products.append({
                 "name": product_name,
                 "price": price,
-                "url": "https://www.pichau.com.br" + product["href"]
+                "url": f"https://www.pichau.com.br{product['href']}"
             })
 
         return products

@@ -20,44 +20,52 @@ class pichau:
         self.source_url = "https://www.pichau.com.br/search?q="
 
     def search_product(self, search_query):
+        try:
+            url = search_query.replace(" ", "%20")
+            url = f"{self.source_url}{url}"
+            logging.info(f"Searching for '{search_query}' in '{url}'")
+            page = requests.get(url)
+            page_content = soup(page.content, "html.parser")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error occurred while making HTTP request: {e}")
+            return []
 
-        # Fixing url for search
-        url = search_query.replace(" ", "%20")
-        url = f"{self.source_url}{url}"
-        print(f"Searching for {bcolors.OKGREEN}'{search_query}' {bcolors.ENDC} in '{url}'...")
-
-        page = requests.get(url)
-        page_content = soup(page.content, "html.parser")
-
-        product_divs = page_content.find_all('a', attrs={'data-cy':"list-product"})
-        result = []
-
-        for product in product_divs:
+        products = []
+        for product in page_content.find_all('a', attrs={'data-cy':"list-product"}):
             product_name = product.find('h2')
-            
-            if product_name is None: continue
+            if not product_name:
+                continue
             product_name = product_name.text.strip()
 
             #checking if product is the same as the search query
             valid_product = True
-            for word in search_query.lower().split():
-                if word not in product_name.lower().split(): 
+            search_keys = search_query.lower().split()
+            for word in search_keys:
+                if not re.search(str(word), product_name.lower()): 
                     valid_product = False
-            if not valid_product: continue
+            if not valid_product: 
+                continue
 
             #getting product price        
             product_price = product.find('div', class_="")
+            if not product_price:
+                continue
 
-            if product_price is None: continue
-            prices = re.findall(r'R\$\s*(\d+\.\d{2})', product_price.text.strip())            
-            if len(prices) == 0: continue
+            prices = re.findall(r'R?\$\s*[\d,]+(?:\.\d{2})?', 
+                                product_price.text.strip())            
+            
+            if len(prices) == 0:
+                continue
 
-            #adding product to result
-            result += [{
+            # Getting right price
+            price = prices[1] if len(prices) > 2 else prices[0]
+            price = price.replace("R$", "").replace(" ", "").replace(",", "")
+
+            #adding product to products
+            products.append({
                 "name": product_name,
-                "price": prices[1] if len(prices) > 2  else prices[0],
-                "url": "https://www.pichau.com.br"+product["href"]
-            }]
-        #end for
-        return result
-    #end def
+                "price": price,
+                "url": "https://www.pichau.com.br" + product["href"]
+            })
+
+        return products
