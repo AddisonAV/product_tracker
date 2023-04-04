@@ -2,6 +2,7 @@ import logging, yaml, time
 import datetime
 from Classes.telegram import Telegram
 from Sources import sources
+import re
 
 # Setting up the config variables
 with open("config.yaml", 'r') as f:
@@ -52,8 +53,7 @@ def run():
     # Set up the logging
     logging.basicConfig(filename=f'promo_catcher_{datetime.date.today()}.log', level=logging.INFO)
 
-
-    while True:
+    try:
         for product in products:
             product_name = product["name"]
             price_threshold = product["price"]
@@ -63,8 +63,8 @@ def run():
             if lowest_price is not None:
                 if lowest_price < price_threshold:
                     # Send the results to Telegram
-                        #telegram.send(f"Lowest price found: R${results[0]['price']} ({results[0]['name']})\n{results[0]['url']}")
-                        print(f"Lowest price of the week: {bcolors.OKGREEN}${lowest_price:.2f}{bcolors.ENDC}")
+                        telegram.send(f"Lowest price found: R${results[0]['price']} ({results[0]['name']})\n{results[0]['url']}")
+                        print(f"Lowest price of the week: {bcolors.OKGREEN}R$ {lowest_price:.2f}{bcolors.ENDC}")
             else:
                 print("No product found.")
         #end for
@@ -72,5 +72,10 @@ def run():
         print(f"Last checked: {datetime.datetime.now()}")
         logging.info(f"Last checked: {datetime.datetime.now()}")
         time.sleep(3600 * 6) # check once a day
+        run()
+    except KeyboardInterrupt:
+        # User pressed Ctrl+C, silently exit
+        print("Script ended with keybord input (user)!!")
+        logging.info("Script ended with keybord input (user)!!")
+        
 
-run()

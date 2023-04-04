@@ -39,8 +39,9 @@ class pichau:
 
             #checking if product is the same as the search query
             valid_product = True
-            for word in search_query.lower().split():
-                if word not in product_name.lower().split(): 
+            search_keys = search_query.lower().split()
+            for word in search_keys:
+                if not re.search(str(word), product_name.lower()): 
                     valid_product = False
             if not valid_product: 
                 continue
@@ -49,14 +50,21 @@ class pichau:
             product_price = product.find('div', class_="")
             if not product_price:
                 continue
-            prices = re.findall(r'R\$\s*(\d+\.\d{2})', product_price.text.strip())            
+
+            prices = re.findall(r'R?\$\s*[\d,]+(?:\.\d{2})?', 
+                                product_price.text.strip())            
+            
             if len(prices) == 0:
                 continue
+
+            # Getting right price
+            price = prices[1] if len(prices) > 2 else prices[0]
+            price = price.replace("R$", "").replace(" ", "").replace(",", "")
 
             #adding product to products
             products.append({
                 "name": product_name,
-                "price": prices[1] if len(prices) > 2 else prices[0],
+                "price": price,
                 "url": "https://www.pichau.com.br" + product["href"]
             })
 
