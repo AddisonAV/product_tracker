@@ -1,3 +1,4 @@
 Classes/__pycache__
 *.pyc
-config.ini
+config.yaml
+*.log
