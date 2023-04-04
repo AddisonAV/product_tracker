@@ -1,0 +1,63 @@
+from bs4 import BeautifulSoup as soup
+import time, requests, logging
+import re
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+class pichau:
+
+    def __init__(self):
+        self.source_url = "https://www.pichau.com.br/search?q="
+
+    def search_product(self, search_query):
+
+        # Fixing url for search
+        url = search_query.replace(" ", "%20")
+        url = f"{self.source_url}{url}"
+        print(f"Searching for {bcolors.OKGREEN}'{search_query}' {bcolors.ENDC} in '{url}'...")
+
+        page = requests.get(url)
+        page_content = soup(page.content, "html.parser")
+
+        product_divs = page_content.find_all('a', attrs={'data-cy':"list-product"})
+        result = []
+
+        for product in product_divs:
+            product_name = product.find('h2')
+            
+            if product_name is None: continue
+            product_name = product_name.text.strip()
+
+            #checking if product is the same as the search query
+            valid_product = True
+            for word in search_query.lower().split():
+                if word not in product_name.lower().split(): 
+                    valid_product = False
+            if not valid_product: continue
+
+            #getting product price        
+            product_price = product.find('div', class_="")
+
+            if product_price is None: continue
+            prices = re.findall(r'R\$\s*(\d+\.\d{2})', product_price.text.strip())            
+            if len(prices) == 0: continue
+
+            #adding product to result
+            result += [{
+                "name": product_name,
+                "price": prices[1] if len(prices) > 2  else prices[0],
+                "url": "https://www.pichau.com.br"+product["href"]
+            }]
+        #end for
+        return result
+    #end def
